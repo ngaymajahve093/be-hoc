@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Thu giọng mẹ – Bé Học Vui</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: #fff8f0; color: #333; }
+  header { background: #ff8a65; color: #fff; padding: 12px 16px; position: sticky; top: 0; z-index: 2; }
+  header h1 { margin: 0; font-size: 19px; }
+  .bar { height: 8px; background: rgba(255,255,255,.35); border-radius: 4px; margin-top: 8px; overflow: hidden; }
+  .bar i { display: block; height: 100%; background: #fff; width: 0; transition: width .3s; }
+  #prog { font-size: 13px; margin-top: 4px; opacity: .95; }
+  main { padding: 12px 14px 120px; max-width: 560px; margin: 0 auto; }
+  .chips { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 6px; }
+  .chip { flex: none; border: 2px solid #ffab91; background: #fff; border-radius: 18px; padding: 6px 12px; font-size: 14px; }
+  .chip.on { background: #ff7043; color: #fff; border-color: #ff7043; }
+  .card { background: #fff; border-radius: 18px; box-shadow: 0 2px 10px rgba(0,0,0,.08); padding: 18px 16px; margin-top: 10px; text-align: center; }
+  #num { font-size: 13px; color: #999; }
+  #txt { font-size: 28px; font-weight: 700; margin: 14px 0 6px; line-height: 1.3; min-height: 72px; display: flex; align-items: center; justify-content: center; }
+  #state { font-size: 14px; min-height: 20px; color: #888; }
+  #state.ok { color: #2e7d32; font-weight: 600; }
+  #state.rec { color: #d32f2f; font-weight: 700; }
+  #recBtn { width: 112px; height: 112px; border-radius: 50%; border: 0; background: #e53935; color: #fff; font-size: 17px; font-weight: 700; margin: 14px auto 8px; display: block; box-shadow: 0 4px 12px rgba(229,57,53,.4); }
+  #recBtn.on { background: #b71c1c; animation: pulse 1s infinite; }
+  @keyframes pulse { 50% { transform: scale(1.07); } }
+  .row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 8px; }
+  button.b { border: 0; border-radius: 12px; padding: 11px 14px; font-size: 15px; background: #ffe0b2; color: #333; }
+  button.b:disabled { opacity: .4; }
+  button.big { width: 100%; padding: 14px; font-size: 17px; font-weight: 700; background: #43a047; color: #fff; border-radius: 14px; border: 0; }
+  label.f { display: flex; align-items: center; gap: 6px; font-size: 14px; margin: 8px 2px 0; }
+  .tips { font-size: 14px; background: #fff3e0; border-radius: 12px; padding: 10px 12px; margin-top: 12px; line-height: 1.5; }
+  footer { position: fixed; left: 0; right: 0; bottom: 0; background: #fff; padding: 10px 14px calc(10px + env(safe-area-inset-bottom)); box-shadow: 0 -2px 10px rgba(0,0,0,.08); }
+  footer div { max-width: 560px; margin: 0 auto; }
+  #loading { text-align: center; padding: 40px 10px; color: #888; }
+  .small { font-size: 12px; color: #999; text-align: center; margin-top: 6px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🎙️ Mẹ thu giọng cho <span id="nick">bé</span></h1>
+  <div class="bar"><i id="barI"></i></div>
+  <div id="prog">Đang tải…</div>
+</header>
+<main>
+  <div id="loading">Đang tải danh sách câu…</div>
+  <div id="app" hidden>
+    <div class="chips" id="chips"></div>
+    <label class="f"><input type="checkbox" id="onlyNew" checked> Chỉ hiện câu chưa thu</label>
+    <div class="card">
+      <div id="num"></div>
+      <div id="txt"></div>
+      <div id="state"></div>
+      <button id="recBtn">🎙️ Thu</button>
+      <div class="row">
+        <button class="b" id="prevBtn">⬅ Trước</button>
+        <button class="b" id="playBtn" disabled>▶ Nghe lại</button>
+        <button class="b" id="robotBtn">🤖 Giọng máy</button>
+        <button class="b" id="nextBtn">Tiếp ➡</button>
+      </div>
+      <div class="row"><button class="b" id="delBtn" disabled>🗑 Xóa bản thu này</button></div>
+    </div>
+    <div class="tips">
+      💡 <b>Mẹo thu đẹp:</b> ngồi phòng yên tĩnh, tắt quạt/TV. Cầm điện thoại cách miệng khoảng một gang tay.
+      Bấm <b>Thu</b>, chờ nửa giây rồi đọc thật vui như đang nói với bé, đọc xong bấm lần nữa để dừng.
+      Bấm <b>🤖 Giọng máy</b> nếu muốn nghe cách đọc hiện tại.<br>
+      Không cần thu hết: câu nào chưa thu thì web vẫn dùng giọng máy. Bản thu được lưu ngay trên điện thoại, mai thu tiếp vẫn còn.
+    </div>
+  </div>
+</main>
+<footer><div>
+  <button class="big" id="sendBtn" disabled>📤 Gửi bản thu</button>
+  <div class="small" id="sendInfo">Gửi file cho bố qua Zalo/Drive để đưa lên web</div>
+</div></footer>
+
+<script>
+'use strict';
+const $ = s => document.querySelector(s);
+let ALL = [], GROUPS = [], gi = 0, list = [], idx = 0, nickName = 'bé';
+let recs = new Map();           // hash -> {blob, type, text}
+let hashT, normT;
+
+/* ---------- IndexedDB ---------- */
+const dbP = new Promise((ok, no) => {
+  const r = indexedDB.open('giongMe', 1);
+  r.onupgradeneeded = () => r.result.createObjectStore('rec');
+  r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error);
+});
+const tx = async (mode, fn) => { const db = await dbP; return new Promise((ok, no) => { const t = db.transaction('rec', mode), s = t.objectStore('rec'); const r = fn(s); t.oncomplete = () => ok(r && r.result); t.onerror = () => no(t.error); }); };
+const dbAll = async () => { const db = await dbP; return new Promise(ok => { const out = new Map(); const c = db.transaction('rec').objectStore('rec').openCursor(); c.onsuccess = () => { const k = c.result; if (k) { out.set(k.key, k.value); k.continue(); } else ok(out); }; }); };
+if (navigator.storage && navigator.storage.persist) navigator.storage.persist();
+
+/* ---------- Lấy danh sách câu từ chính web của bé ---------- */
+function loadPhrases() {
+  const ifr = document.createElement('iframe');
+  ifr.style.cssText = 'position:absolute;width:1px;height:1px;opacity:0;border:0;left:-9px';
+  ifr.src = 'index.html?thu-am';
+  ifr.onload = () => setTimeout(() => {
+    try {
+      const w = ifr.contentWindow;
+      const d = w.eval(`(() => {
+        const vi = a => a.filter(Boolean).map(normT);
+        const items = Object.values(CATS).flatMap(c => c.items);
+        let khen = [], ten = [], so = [];
+        try { khen = vi([...CALLS(), ...PRAISES(), ...PRAISES_DRAW(), ...OOPS, ...GIGGLE]); } catch (e) {}
+        try { ten = vi(items.flatMap(i => [i.vi, i.vi + ' nè!', i.snd])); } catch (e) {}
+        try { so = vi([...NUMW.slice(1), ...PALETTE.map(p => p[1])]); } catch (e) {}
+        return { all: allPhrases().filter(p => !p[1]).map(p => p[0]), khen, ten, so, nick: Nick(),
+                 hashSrc: hashT.toString(), normSrc: normT.toString() };
+      })()`);
+      hashT = w.hashT || w.eval('hashT'); normT = w.eval('normT');
+      ifr.remove();
+      build(d);
+    } catch (e) { $('#loading').textContent = 'Không tải được danh sách câu: ' + e.message; }
+  }, 600);
+  document.body.appendChild(ifr);
+}
+
+function build(d) {
+  nickName = d.nick; $('#nick').textContent = d.nick;
+  ALL = d.all;
+  const set = new Set(ALL), used = new Set();
+  const take = arr => { const r = []; for (const t of arr) if (set.has(t) && !used.has(t)) { used.add(t); r.push(t); } return r; };
+  const khen = take(d.khen.concat(ALL.filter(t => /chào|giỏi|hoan hô|tuyệt|yêu/i.test(t) && t.split(' ').length <= 8)));
+  const ten = take(d.ten), so = take(d.so);
+  const lvl = ALL.filter(t => /lên cấp \d+|bắt được \d+ quả/.test(t));
+  const rest = ALL.filter(t => !used.has(t) && !lvl.includes(t));
+  const ngan = take(rest.filter(t => t.split(' ').length <= 5)), dai = take(rest);
+  take(lvl);
+  GROUPS = [['💖 Khen & chào', khen], ['🐶 Tên & tiếng kêu', ten], ['🔢 Số & màu', so], ['💬 Câu ngắn', ngan], ['📖 Câu dài', dai], ['🏆 Lên cấp, đếm bóng', lvl], ['📋 Tất cả', ALL]]
+    .filter(g => g[1].length);
+  $('#chips').innerHTML = GROUPS.map((g, i) => `<button class="chip" data-i="${i}">${g[0]} (${g[1].length})</button>`).join('');
+  $('#chips').onclick = e => { const b = e.target.closest('.chip'); if (b) { gi = +b.dataset.i; refresh(true); } };
+  $('#loading').hidden = true; $('#app').hidden = false;
+  refresh(true);
+}
+
+const key = t => hashT('vi|' + t);
+function refresh(reset) {
+  document.querySelectorAll('.chip').forEach((c, i) => c.classList.toggle('on', i === gi));
+  const g = GROUPS[gi][1], only = $('#onlyNew').checked;
+  const cur = list[idx];
+  list = only ? g.filter(t => !recs.has(key(t)) || t === cur) : g.slice();
+  idx = reset ? 0 : Math.max(0, list.indexOf(cur));
+  if (reset && only) list = g.filter(t => !recs.has(key(t)));
+  show();
+}
+function show() {
+  const done = ALL.filter(t => recs.has(key(t))).length;
+  $('#prog').textContent = `Đã thu ${done} / ${ALL.length} câu`;
+  $('#barI').style.width = (100 * done / ALL.length) + '%';
+  $('#sendBtn').disabled = !recs.size;
+  $('#sendBtn').textContent = `📤 Gửi bản thu (${recs.size} câu)`;
+  const t = list[idx];
+  if (!t) { $('#txt').textContent = '🎉 Nhóm này thu xong rồi!'; $('#num').textContent = ''; $('#state').textContent = 'Chọn nhóm khác ở trên nhé'; $('#state').className = ''; ['recBtn','playBtn','delBtn','robotBtn'].forEach(id => $('#' + id).disabled = true); return; }
+  $('#recBtn').disabled = false; $('#robotBtn').disabled = !(window.VOICE && VOICE.has(key(t)));
+  $('#num').textContent = `Câu ${idx + 1} / ${list.length}`;
+  $('#txt').textContent = t;
+  const has = recs.has(key(t));
+  $('#state').textContent = has ? '✅ Đã thu' : 'Chưa thu'; $('#state').className = has ? 'ok' : '';
+  $('#playBtn').disabled = $('#delBtn').disabled = !has;
+  $('#prevBtn').disabled = idx === 0; $('#nextBtn').disabled = idx >= list.length - 1;
+}
+
+/* ---------- Thu âm ---------- */
+let stream = null, mr = null, chunks = [], autoStop, player = null;
+const play = url => { if (player) player.pause(); player = new Audio(url); player.play().catch(() => {}); return player; };
+async function startRec() {
+  try {
+    if (!stream) stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 } });
+  } catch (e) { alert('Cần cho phép dùng micro để thu âm. Hãy bấm "Cho phép" khi trình duyệt hỏi.'); return; }
+  if (player) player.pause();
+  const type = ['audio/webm;codecs=opus', 'audio/mp4', 'audio/ogg;codecs=opus'].find(t => window.MediaRecorder && MediaRecorder.isTypeSupported(t)) || '';
+  mr = new MediaRecorder(stream, type ? { mimeType: type } : undefined);
+  chunks = []; const t = list[idx];
+  mr.ondataavailable = e => e.data.size && chunks.push(e.data);
+  mr.onstop = async () => {
+    clearTimeout(autoStop);
+    $('#recBtn').classList.remove('on'); $('#recBtn').textContent = '🎙️ Thu';
+    const blob = new Blob(chunks, { type: mr.mimeType || type || 'audio/webm' });
+    if (blob.size < 1500) { $('#state').textContent = 'Bản thu quá ngắn, thử lại nhé'; $('#state').className = 'rec'; return; }
+    const v = { blob, type: blob.type, text: t, at: Date.now() };
+    recs.set(key(t), v); await tx('readwrite', s => s.put(v, key(t)));
+    show(); $('#state').textContent = '✅ Đã lưu – đang phát lại'; $('#state').className = 'ok';
+    play(URL.createObjectURL(blob));
+  };
+  mr.start();
+  $('#recBtn').classList.add('on'); $('#recBtn').textContent = '⏹ Dừng';
+  $('#state').textContent = '🔴 Đang thu… đọc đi mẹ'; $('#state').className = 'rec';
+  autoStop = setTimeout(() => mr && mr.state === 'recording' && mr.stop(), 15000);
+}
+$('#recBtn').onclick = () => { if (mr && mr.state === 'recording') mr.stop(); else startRec(); };
+$('#playBtn').onclick = () => { const r = recs.get(key(list[idx])); if (r) play(URL.createObjectURL(r.blob)); };
+$('#robotBtn').onclick = () => play('audio/' + key(list[idx]) + '.mp3');
+$('#delBtn').onclick = async () => { const k = key(list[idx]); if (!confirm('Xóa bản thu câu này?')) return; recs.delete(k); await tx('readwrite', s => s.delete(k)); show(); };
+$('#prevBtn').onclick = () => { if (idx > 0) { idx--; show(); } };
+$('#nextBtn').onclick = () => { if (idx < list.length - 1) { idx++; show(); } };
+$('#onlyNew').onchange = () => refresh(false);
+
+/* ---------- Đóng gói ZIP (không nén) để gửi ---------- */
+const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+const crc32 = b => { let c = 0xFFFFFFFF; for (let i = 0; i < b.length; i++) c = CRC[(c ^ b[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
+function zip(files) {               // files: [{name, data:Uint8Array}]
+  const enc = new TextEncoder(), parts = [], cen = []; let off = 0;
+  for (const f of files) {
+    const n = enc.encode(f.name), c = crc32(f.data), sz = f.data.length;
+    const h = new DataView(new ArrayBuffer(30));
+    h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(6, 0x0800, true);
+    h.setUint32(14, c, true); h.setUint32(18, sz, true); h.setUint32(22, sz, true); h.setUint16(26, n.length, true);
+    parts.push(new Uint8Array(h.buffer), n, f.data);
+    const e = new DataView(new ArrayBuffer(46));
+    e.setUint32(0, 0x02014b50, true); e.setUint16(4, 20, true); e.setUint16(6, 20, true); e.setUint16(8, 0x0800, true);
+    e.setUint32(16, c, true); e.setUint32(20, sz, true); e.setUint32(24, sz, true); e.setUint16(28, n.length, true); e.setUint32(42, off, true);
+    cen.push(new Uint8Array(e.buffer), n);
+    off += 30 + n.length + sz;
+  }
+  const cs = cen.reduce((a, b) => a + b.length, 0), end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0, 0x06054b50, true); end.setUint16(8, files.length, true); end.setUint16(10, files.length, true);
+  end.setUint32(12, cs, true); end.setUint32(16, off, true);
+  return new Blob([...parts, ...cen, new Uint8Array(end.buffer)], { type: 'application/zip' });
+}
+const extOf = t => /mp4|aac|m4a/.test(t) ? 'm4a' : /ogg/.test(t) ? 'ogg' : 'webm';
+$('#sendBtn').onclick = async () => {
+  const files = [], man = {};
+  for (const [k, v] of recs) { const name = k + '.' + extOf(v.type); man[name] = v.text; files.push({ name, data: new Uint8Array(await v.blob.arrayBuffer()) }); }
+  files.push({ name: 'danh-sach.json', data: new TextEncoder().encode(JSON.stringify(man, null, 1)) });
+  const d = new Date(), stamp = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}-${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}`;
+  const file = new File([zip(files)], `giong-me-${stamp}.zip`, { type: 'application/zip' });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try { await navigator.share({ files: [file], title: 'Giọng mẹ cho bé' }); return; } catch (e) { if (e.name === 'AbortError') return; }
+  }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(file); a.download = file.name; a.click();
+  $('#sendInfo').textContent = `Đã lưu ${file.name} vào thư mục Tải xuống – gửi file này cho bố qua Zalo nhé`;
+};
+</script>
+<script src="audio/list.js"></script>
+<script>
+dbAll().then(m => { recs = m; loadPhrases(); });
+</script>
+</body>
+</html>
