@@ -347,7 +347,7 @@ function loadVoices() {
   if (!('speechSynthesis' in window)) return;
   const v = speechSynthesis.getVoices();
   const F = /female|nữ|woman|girl|child|kid|hoai ?my|linh|mai|x-gft|x-vif|x-sfg|x-tpc|x-iob|samantha|aria|jenny|ana\b|zira|karen|moira|tessa|google/i;
-  const M = /\bmale|nam minh|\bnam\b|x-gfm|x-vim|x-iom|x-tpd|david|mark|guy|daniel/i;
+  const M = /\bmale|nam ?minh|microsoft an\b|x-gfm|x-vim|x-vid|x-iom|x-tpd|david|mark|guy|daniel|\bfred\b|\balex\b/i;
   const best = (re, name) => { const list = v.filter(x => re.test(x.lang)); return list.find(x => x.name === name) || list.find(x => F.test(x.name) && !M.test(x.name)) || list.find(x => !M.test(x.name)) || list[0] || null; };
   viVoice = best(/^vi/i, S.viVoice);
   enVoice = best(/^en[-_](US|GB)/i, S.enVoice) || best(/^en/i, S.enVoice);
