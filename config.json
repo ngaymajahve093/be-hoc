@@ -1,4 +1,6 @@
 {
-  "version": 0,
-  "settings": {}
+  "version": 1,
+  "settings": {
+    "unlockAll": true
+  }
 }
