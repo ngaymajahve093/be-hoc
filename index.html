@@ -402,7 +402,7 @@ const MENU = ['animals','sea','fruits','vehicles','body','nature','things','shap
 const EXTRA = { game: { title: 'Bé tìm', icon: '🎯', color: '#f8bbd0' }, balloons: { title: 'Bong bóng', icon: '🎈', color: '#d1c4e9' }, review: { title: 'Ôn lại', icon: '🔁', color: '#b2dfdb' }, draw: { title: 'Bé vẽ', icon: '🖍️', color: '#ffe082' }, sleep: { title: 'Ru ngủ', icon: '🌙', color: '#9fa8da' } };
 
 /* ================== CÀI ĐẶT ================== */
-const DEF = { nick: 'Meo', lang: 'both', anim: true, eye: true, breakEvery: 5, sessionLen: 15, restLen: 3, dailyLimit: 45, choices: 0, voice: true, fx: true, rate: 0.9, pitch: 1.6, viVoice: '', enVoice: '', pen: true, music: true, musicVol: 0.5, rec: true, sleepMin: 20 };
+const DEF = { nick: 'Meo', lang: 'both', anim: true, eye: true, breakEvery: 5, sessionLen: 15, restLen: 3, dailyLimit: 45, choices: 0, voice: true, fx: true, rate: 0.9, pitch: 1.6, viVoice: '', enVoice: '', pen: true, music: true, musicVol: 0.5, rec: true, sleepMin: 20, unlockAll: false };
 let S = Object.assign({}, DEF, JSON.parse(store.getItem('beHocSet') || '{}'));
 const saveS = () => store.setItem('beHocSet', JSON.stringify(S));
 const today = () => new Date().toLocaleDateString('sv');
@@ -413,23 +413,23 @@ const nick = () => (S.nick || 'bé').trim();
 const Nick = () => { const n = nick(); return n.charAt(0).toUpperCase() + n.slice(1); };
 
 /* ================== TIẾN ĐỘ / LÊN CẤP ================== */
-const INIT = { numbers: 3, letters: 4, animals: 4, sea: 4, colors: 3, fruits: 4, vehicles: 4, body: 4, shapes: 3, nature: 4, things: 4 };
+const INIT = { numbers: 10, letters: 10, animals: 12, sea: 10, colors: 10, fruits: 10, vehicles: 10, body: 12, shapes: 9, nature: 12, things: 14 };
 let P = JSON.parse(store.getItem('beHocProg') || 'null') || { it: {}, unlock: {}, stars: 0, nw: {} };
-for (const k in INIT) if (!P.unlock[k]) P.unlock[k] = INIT[k];
+for (const k in INIT) P.unlock[k] = Math.max(P.unlock[k] || 0, INIT[k]);
 const saveP = () => store.setItem('beHocProg', JSON.stringify(P));
 const key = (k, i) => k + ':' + i;
 const rec = (k, i) => P.it[key(k, i)] || (P.it[key(k, i)] = { s: 0, c: 0, w: 0, t: 0 });
 const isNew = (k, i) => !!P.nw[key(k, i)];
 const mastered = (k, i) => { const r = P.it[key(k, i)]; return !!r && (r.c >= 3 || (r.c >= 1 && r.s >= 6)); };
 function markSeen(k, i) { const r = rec(k, i); r.s++; r.t = Date.now(); if (r.s >= 3) delete P.nw[key(k, i)]; saveP(); }
-const unlockedIdx = k => Array.from({ length: Math.min(P.unlock[k], CATS[k].items.length) }, (_, i) => i);
-const level = () => 1 + Math.floor(Object.keys(INIT).reduce((a, k) => a + P.unlock[k] - INIT[k], 0) / 2);
+const unlockedIdx = k => Array.from({ length: S.unlockAll ? CATS[k].items.length : Math.min(P.unlock[k], CATS[k].items.length) }, (_, i) => i);
+const level = () => 1 + Math.floor(Object.keys(INIT).reduce((a, k) => a + Math.min(P.unlock[k], CATS[k].items.length) - INIT[k], 0) / 4);
 const autoChoices = () => S.choices || (level() < 4 ? 2 : level() < 10 ? 3 : 4);
 function tryLevelUp(k) {
   const u = unlockedIdx(k), tot = CATS[k].items.length;
   if (u.length >= tot) return null;
   if (u.filter(i => mastered(k, i)).length < Math.ceil(u.length * 0.75)) return null;
-  const from = u.length; P.unlock[k] = Math.min(tot, from + 2);
+  const from = u.length; P.unlock[k] = Math.min(tot, from + 4);
   const news = []; for (let i = from; i < P.unlock[k]; i++) { P.nw[key(k, i)] = 1; news.push(i); }
   saveP(); return news;
 }
@@ -804,6 +804,7 @@ function renderLearn(arg) {
     else { const n = refs.findIndex(r => isNew(r.k, r.i)); if (n >= 0) start = n; }
   }
   $('#title').innerHTML = title;
+  const countMode = k0 === 'numbers'; let countRun = false;
   view.innerHTML = `<div class="learn"><button class="nav" id="prev">‹</button><div class="card" id="card"></div><button class="nav" id="next">›</button></div><div class="dots" id="dots"></div>`;
   const card = $('#card'), dots = $('#dots');
   const total = review ? refs.length : CATS[k0].items.length;
@@ -842,11 +843,22 @@ function renderLearn(arg) {
     restart(card, dir > 0 ? 'slideL' : dir < 0 ? 'slideR' : 'bounce');
     dots.querySelectorAll('i').forEach((d, j) => d.classList.toggle('on', j === pos));
     markSeen(r.k, r.i);
-    const rr = Math.random(); sayItem(item, shown++ === 0 || Math.random() < .4, rr < .3 ? 'fun' : rr < .55 ? 'act' : false);
+    const rr = Math.random(); if (countRun) sayItem(item, false, false); else sayItem(item, shown++ === 0 || Math.random() < .4, rr < .3 ? 'fun' : rr < .55 ? 'act' : false);
   }
   const step = d => { sfx.tap(); pos = (pos + d + refs.length) % refs.length; draw(d); };
   $('#prev').onclick = () => step(-1);
   $('#next').onclick = () => step(1);
+  if (countMode) {
+    view.insertAdjacentHTML('beforeend', '<button class="sbtn" id="count10" style="position:absolute;top:14px;left:50%;transform:translateX(-50%);z-index:3">▶ Đếm 1→10</button>');
+    let stopC = null, running = false;
+    const runFrom = j => { if (!running) return; pos = refs.findIndex(r => r.i === j); if (pos < 0) { running = false; return; } draw(1); stopC = afterSpeech(() => { if (running && j + 1 < refs.length) setTimeout(() => runFrom(j + 1), 900); else { running = countRun = false; $('#count10').textContent = '▶ Đếm 1→10'; } }, 1500, 20000); };
+    $('#count10').onclick = () => {
+      sfx.tap();
+      if (running) { running = countRun = false; stopC && stopC(); speak([]); $('#count10').textContent = '▶ Đếm 1→10'; return; }
+      refs.sort((a, b) => a.i - b.i); running = countRun = true; $('#count10').textContent = '⏹ Dừng'; runFrom(0);
+    };
+    cleanup = () => { running = false; stopC && stopC(); };
+  }
   let sx = null, lastTap = 0, taps = 0;
   card.addEventListener('pointerdown', e => { sx = e.clientX; });
   card.addEventListener('pointerup', e => {
@@ -1347,6 +1359,7 @@ const SET_ROWS = [
   ['sessionLen', 'Mỗi lượt chơi tối đa', [[5,'5 phút'],[10,'10 phút'],[15,'15 phút'],[20,'20 phút'],[30,'30 phút']]],
   ['restLen', 'Nghỉ bắt buộc sau mỗi lượt', [[1,'1 phút'],[2,'2 phút'],[3,'3 phút'],[5,'5 phút'],[10,'10 phút']]],
   ['dailyLimit', 'Giới hạn mỗi ngày', [[20,'20 phút'],[30,'30 phút'],[45,'45 phút'],[60,'60 phút'],[0,'Không giới hạn']]],
+  ['unlockAll', '📚 Hiện tất cả nội dung (không khóa theo cấp)', 'bool'],
   ['choices', 'Số lựa chọn trong "Bé tìm"', [[0,'Tự động theo cấp'],[2,'2 (dễ)'],[3,'3'],[4,'4 (khó)']]],
   ['voice', '🔊 Giọng đọc', 'bool'],
   ['fx', '🔔 Âm thanh vui', 'bool'],
