@@ -42,6 +42,7 @@ def push(msg):
     code, out = run(GIT, 'commit', '-q', '-m', msg, '--', 'audio', cwd=ROOT)
     if code:
         return 'nothing to commit' in out or log('commit lỗi:', out[-300:])
+    run(GIT, 'pull', '-q', '--rebase', '--autostash', cwd=ROOT, timeout=300)   # routine cloud cũng đẩy lên main
     code, out = run(GIT, 'push', '-q', cwd=ROOT, timeout=600)
     log('Đã đẩy lên web:', msg) if code == 0 else log('push lỗi:', out[-300:])
 
