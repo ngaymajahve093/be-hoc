@@ -40,7 +40,7 @@ FINAL = f'{SIL},areverse,{SIL},areverse,loudnorm=I=-16:TP=-1.5:LRA=11,afade=t=in
 
 
 def ff(*args):
-    subprocess.run([FF, '-y', '-loglevel', 'error', *args], check=True)
+    subprocess.run([FF, '-y', '-loglevel', 'error', *args], check=True, creationflags=0x08000000 if os.name == 'nt' else 0)
 
 
 def build_ref(man, max_sec=11.0):
@@ -82,6 +82,8 @@ def main():
     ap.add_argument('--test', type=int, default=0)
     ap.add_argument('--force', action='store_true', help='sinh lại cả câu AI đã có')
     ap.add_argument('--speed', type=float, default=0.95)
+    ap.add_argument('--limit', type=int, default=0, help='chỉ sinh tối đa N câu rồi dừng (để đẩy lên web dần)')
+    ap.add_argument('--new-ref', action='store_true', help='ghép lại giọng mẫu từ các câu mẹ thu')
     a = ap.parse_args()
 
     man = json.load(open(os.path.join(RAW, 'danh-sach.json'), encoding='utf-8'))
@@ -98,13 +100,17 @@ def main():
         if h in mom or (h in ai and not a.force):
             continue
         todo.append((h, text))
-    if a.test:
-        todo = todo[:a.test]
-    print('Cần sinh', len(todo), 'câu', flush=True)
+    print('Cần sinh', len(todo), 'câu', flush=True)   # tổng còn lại (auto_giong_me.py đọc dòng này)
+    if a.test or a.limit:
+        todo = todo[:a.test or a.limit]
     if not todo:
         return
 
-    ref, ref_text = build_ref(man)
+    ref, rt = os.path.join(RAW, 'ref.wav'), os.path.join(RAW, 'ref.txt')
+    if a.new_ref or a.test or not (os.path.exists(ref) and os.path.exists(rt)):
+        ref, ref_text = build_ref(man)   # giữ cố định giọng mẫu để mọi câu AI cùng một giọng
+    else:
+        ref_text = open(rt, encoding='utf-8').read()
     import soundfile as sf, torch, torchaudio  # torchaudio mới cần DLL FFmpeg -> đọc wav bằng soundfile
 
     def _load(path, *_, **__):

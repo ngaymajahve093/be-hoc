@@ -71,6 +71,12 @@
       Bấm <b>🤖 Giọng máy</b> nếu muốn nghe cách đọc hiện tại.<br>
       Các nhóm khác là tùy chọn: nếu nghe câu nào AI đọc chưa hay (nút 🤖) thì mẹ thu lại câu đó. Bản thu được lưu ngay trên điện thoại, mai thu tiếp vẫn còn.
     </div>
+    <details class="tips" id="cfg" style="background:#e3f2fd">
+      <summary>⚙️ Kết nối tự động <span id="cloudSt"></span></summary>
+      <p style="margin:8px 0">Dán <b>mã kết nối</b> (bố tạo trên GitHub) một lần duy nhất. Sau đó mỗi câu thu xong sẽ tự gửi về máy tính của bố, không cần bấm gửi.</p>
+      <input id="keyIn" type="password" autocomplete="off" placeholder="github_pat_…" style="width:100%;padding:10px;font-size:15px;border:1px solid #90caf9;border-radius:8px">
+      <div class="row"><button class="b" id="keySave">💾 Lưu mã</button><button class="b" id="keyDel">Xóa mã</button></div>
+    </details>
   </div>
 </main>
 <footer><div>
@@ -162,8 +168,8 @@ function show() {
   $('#recBtn').disabled = false; $('#robotBtn').disabled = !(window.VOICE && VOICE.has(key(t)));
   $('#num').textContent = `Câu ${idx + 1} / ${list.length}`;
   $('#txt').textContent = t;
-  const has = recs.has(key(t));
-  $('#state').textContent = has ? '✅ Đã thu' : 'Chưa thu'; $('#state').className = has ? 'ok' : '';
+  const has = recs.has(key(t)), r = recs.get(key(t));
+  $('#state').textContent = has ? '✅ Đã thu' + (cloudKey() ? (r.sent ? ' · ☁️ đã gửi' : ' · ⏳ chờ gửi') : '') : 'Chưa thu'; $('#state').className = has ? 'ok' : '';
   $('#playBtn').disabled = $('#delBtn').disabled = !has;
   $('#prevBtn').disabled = idx === 0; $('#nextBtn').disabled = idx >= list.length - 1;
 }
@@ -189,6 +195,7 @@ async function startRec() {
     recs.set(key(t), v); await tx('readwrite', s => s.put(v, key(t)));
     show(); $('#state').textContent = '✅ Đã lưu – đang phát lại'; $('#state').className = 'ok';
     play(URL.createObjectURL(blob));
+    syncCloud();
   };
   mr.start();
   $('#recBtn').classList.add('on'); $('#recBtn').textContent = '⏹ Dừng';
@@ -239,9 +246,54 @@ $('#sendBtn').onclick = async () => {
   $('#sendInfo').textContent = `Đã lưu ${file.name} vào thư mục Tải xuống – gửi file này cho bố qua Zalo nhé`;
 };
 </script>
+<script>
+/* ---------- Tự gửi bản thu về kho riêng tư trên GitHub ---------- */
+const REPO = 'ngaymajahve093/giong-me-inbox', API = 'https://api.github.com/repos/' + REPO + '/contents/rec/';
+const cloudKey = () => localStorage.getItem('giongMeKey') || '';
+const gh = (path, opt = {}) => fetch(API + path, { ...opt, headers: { Authorization: 'Bearer ' + cloudKey(), Accept: 'application/vnd.github+json', ...(opt.headers || {}) } });
+const b64 = blob => new Promise(ok => { const f = new FileReader(); f.onload = () => ok(String(f.result).split(',')[1]); f.readAsDataURL(blob); });
+async function put(name, content, message) {
+  const old = await gh(name); const sha = old.ok ? (await old.json()).sha : undefined;
+  const r = await gh(name, { method: 'PUT', body: JSON.stringify({ message, content, sha }) });
+  if (!r.ok) throw new Error(r.status);
+}
+let syncing = false, cloudErr = '';
+async function syncCloud() {
+  if (syncing || !cloudKey()) return cloudStatus();
+  syncing = true;
+  try {
+    for (const [k, v] of recs) {
+      if (v.sent) continue;
+      const name = k + '.' + extOf(v.type);
+      await put(k + '.txt', btoa(unescape(encodeURIComponent(v.text))), 'chữ: ' + v.text);
+      await put(name, await b64(v.blob), 'thu: ' + v.text);
+      v.sent = true; await tx('readwrite', s => s.put(v, k));
+      cloudErr = ''; cloudStatus(); show();
+    }
+  } catch (e) {
+    cloudErr = e.message === '401' || e.message === '403' || e.message === '404' ? 'Mã kết nối sai hoặc hết hạn' : 'Mất mạng, sẽ thử lại';
+    setTimeout(syncCloud, 30000);
+  }
+  syncing = false; cloudStatus();
+}
+function cloudStatus() {
+  const n = [...recs.values()].filter(v => v.sent).length;
+  $('#cloudSt').textContent = !cloudKey() ? '– chưa kết nối' : cloudErr ? '⚠️ ' + cloudErr : `✅ đã gửi ${n}/${recs.size}`;
+  if (cloudKey()) $('#sendInfo').textContent = cloudErr ? '⚠️ ' + cloudErr : `☁️ Tự động gửi về máy bố: ${n}/${recs.size} câu. Nút trên chỉ để gửi dự phòng.`;
+}
+$('#keySave').onclick = async () => {
+  const k = $('#keyIn').value.trim(); if (!k) return;
+  localStorage.setItem('giongMeKey', k); $('#keyIn').value = '';
+  const r = await fetch('https://api.github.com/repos/' + REPO, { headers: { Authorization: 'Bearer ' + k } });
+  if (!r.ok) { cloudErr = 'Mã kết nối sai hoặc hết hạn'; cloudStatus(); alert('Mã chưa đúng, kiểm tra lại nhé.'); return; }
+  cloudErr = ''; $('#cfg').open = false; alert('Đã kết nối! Bản thu sẽ tự gửi về máy bố.'); syncCloud();
+};
+$('#keyDel').onclick = () => { localStorage.removeItem('giongMeKey'); cloudStatus(); };
+addEventListener('online', syncCloud);
+</script>
 <script src="audio/list.js"></script>
 <script>
-dbAll().then(m => { recs = m; loadPhrases(); });
+dbAll().then(m => { recs = m; loadPhrases(); cloudStatus(); syncCloud(); });
 </script>
 </body>
 </html>
