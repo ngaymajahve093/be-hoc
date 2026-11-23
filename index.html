@@ -186,6 +186,26 @@ body.eye .board{background:#f7f0e1}
 .board .gbtn{position:absolute;top:10px;left:10px;z-index:3;border:none;border-radius:20px;background:var(--card);font-size:22px;font-weight:800;padding:10px 16px;box-shadow:var(--shadow)}
 .tsz{font-size:0!important}
 .tsz i{display:inline-block;border-radius:50%;background:var(--ink)}
+/* Ru ngủ */
+body.night{--bg:#121830;--card:#1f2847;--ink:#e9e4d4}
+body.night #warm{opacity:1;background:rgba(255,140,40,.22)}
+body.night #app{filter:brightness(.8) saturate(.7)}
+.sleepv{height:100%;display:flex;flex-direction:column;gap:12px}
+.sleepbar{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.sbtn{border:none;border-radius:18px;background:var(--card);color:var(--ink);font-size:20px;font-weight:800;padding:12px 18px;font-family:inherit;box-shadow:var(--shadow)}
+.sgrid{flex:1;overflow:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px;align-content:start;padding:4px}
+.scard{border:none;border-radius:24px;background:var(--card);color:var(--ink);padding:16px;display:flex;flex-direction:column;align-items:center;gap:8px;font-size:19px;font-weight:800;position:relative;box-shadow:var(--shadow);text-align:center}
+.scard .se{font-size:60px;line-height:1}
+.story{height:100%;display:flex;flex-direction:column;align-items:center;gap:10px;overflow:hidden}
+.semo{font-size:clamp(90px,20vmin,170px);line-height:1}
+.story h2{margin:0;font-size:clamp(22px,4vmin,38px);text-align:center}
+.stext{flex:1;overflow:auto;max-width:820px;font-size:clamp(17px,2.6vmin,24px);line-height:1.65;opacity:.7;padding:0 10px}
+.sctl{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+#black{position:fixed;inset:0;background:#000;z-index:400;display:none;align-items:flex-end;justify-content:center;padding-bottom:40px;color:#2a2a2a;font-size:20px;cursor:none;touch-action:none}
+#black.show{display:flex}
+@media (max-width:640px),(max-height:520px){
+  .sbtn{font-size:16px;padding:9px 12px}.sgrid{grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}.scard .se{font-size:44px}.scard{font-size:15px}
+}
 @media (max-width:640px),(max-height:520px){
   header{gap:6px;padding:6px 8px;padding-top:max(6px,env(safe-area-inset-top))}
   .tb{width:42px;height:42px;border-radius:13px;font-size:20px;box-shadow:0 3px 0 rgba(0,0,0,.08)}
@@ -301,6 +321,7 @@ body.eye .board{background:#f7f0e1}
   </div>
 </div>
 <div id="toast"></div>
+<div id="black"><span id="blackHint"></span></div>
 
 <script src="audio/list.js"></script>
 <script>
@@ -377,11 +398,11 @@ const CATS = {
     it('🍼','Bình sữa','ực ực','Baby bottle'), it('👟','Đôi giày','đi chơi','Shoes'), it('🎈','Bóng bay','bay bay','Balloon'), it('🔔','Cái chuông','leng keng','Bell'),
     it('🎁','Hộp quà','bất ngờ','Gift'), it('🕰️','Đồng hồ','tích tắc','Clock') ] },
 };
-const MENU = ['animals','sea','fruits','vehicles','body','nature','things','shapes','colors','numbers','letters','game','balloons','draw','review'];
-const EXTRA = { game: { title: 'Bé tìm', icon: '🎯', color: '#f8bbd0' }, balloons: { title: 'Bong bóng', icon: '🎈', color: '#d1c4e9' }, review: { title: 'Ôn lại', icon: '🔁', color: '#b2dfdb' }, draw: { title: 'Bé vẽ', icon: '🖍️', color: '#ffe082' } };
+const MENU = ['animals','sea','fruits','vehicles','body','nature','things','shapes','colors','numbers','letters','game','balloons','draw','review','sleep'];
+const EXTRA = { game: { title: 'Bé tìm', icon: '🎯', color: '#f8bbd0' }, balloons: { title: 'Bong bóng', icon: '🎈', color: '#d1c4e9' }, review: { title: 'Ôn lại', icon: '🔁', color: '#b2dfdb' }, draw: { title: 'Bé vẽ', icon: '🖍️', color: '#ffe082' }, sleep: { title: 'Ru ngủ', icon: '🌙', color: '#9fa8da' } };
 
 /* ================== CÀI ĐẶT ================== */
-const DEF = { nick: 'Meo', lang: 'both', anim: true, eye: true, breakEvery: 5, sessionLen: 15, restLen: 3, dailyLimit: 45, choices: 0, voice: true, fx: true, rate: 0.9, pitch: 1.6, viVoice: '', enVoice: '', pen: true, music: true, musicVol: 0.5, rec: true };
+const DEF = { nick: 'Meo', lang: 'both', anim: true, eye: true, breakEvery: 5, sessionLen: 15, restLen: 3, dailyLimit: 45, choices: 0, voice: true, fx: true, rate: 0.9, pitch: 1.6, viVoice: '', enVoice: '', pen: true, music: true, musicVol: 0.5, rec: true, sleepMin: 20 };
 let S = Object.assign({}, DEF, JSON.parse(store.getItem('beHocSet') || '{}'));
 const saveS = () => store.setItem('beHocSet', JSON.stringify(S));
 const today = () => new Date().toLocaleDateString('sv');
@@ -438,6 +459,7 @@ function loadVoices() {
   enVoice = best(/^en[-_](US|GB)/i, S.enVoice) || best(/^en/i, S.enVoice);
 }
 if ('speechSynthesis' in window) { loadVoices(); speechSynthesis.onvoiceschanged = loadVoices; }
+let sleepMode = false, storyPlaying = false;
 let speakTimer, spkId = 0, curAudio = null, speakingNow = false;
 const hashT = t => { let h = 5381; for (let i = 0; i < t.length; i++) h = ((h * 33) ^ t.charCodeAt(i)) >>> 0; return h.toString(36); };
 const normT = t => t.trim().replace(/\s+/g, ' ').normalize('NFC');
@@ -627,6 +649,88 @@ const FUN = N => ({
   'Đôi giày': `${N} đi giày vào để đi chơi nào!`, 'Bóng bay': 'Bóng bay bay lên trời, bay bay!', 'Cái chuông': 'Leng keng, leng keng, chuông kêu vui quá!',
   'Hộp quà': `Hộp quà bất ngờ cho ${N} nè, mở ra nào!`, 'Đồng hồ': 'Đồng hồ kêu tích tắc, tích tắc!',
 });
+
+/* ================== CÂU RỦ BÉ LÀM THEO (vận động, bắt chước) ================== */
+const ACT = N => ({
+  'Con mèo': `${N} kêu meo meo giống mèo đi! Rồi rửa mặt như mèo nào!`, 'Con chó': `${N} sủa gâu gâu thật to nào! Vẫy đuôi đi, hi hi!`,
+  'Con gà': `${N} vỗ cánh như gà trống, gáy ò ó o nào!`, 'Con vịt': `${N} đi lạch bạch như vịt nào, cạp cạp!`,
+  'Con bò': `${N} kêu ụm bò thật to nào!`, 'Con lợn': `${N} ủn mũi lên như lợn con, ụt ịt, ụt ịt!`,
+  'Con dê': `${N} kêu be be như dê con nào!`, 'Con ngựa': `${N} phi ngựa nào, lộc cộc, lộc cộc, hí hí!`,
+  'Con voi': `${N} giơ tay làm vòi voi, vẫy vẫy nào!`, 'Con sư tử': `${N} gầm gừ như sư tử nào, gừ gừ! Ôi sợ quá!`,
+  'Con hổ': `${N} giơ móng vuốt như hổ, gừm gừm!`, 'Con khỉ': `${N} gãi đầu như khỉ nào, chí chí chí!`,
+  'Con cừu': `${N} kêu be be, ôm mình mềm như cừu nào!`, 'Con ếch': `${N} ngồi xổm rồi nhảy như ếch nào, ộp ộp!`,
+  'Con chim': `${N} dang tay bay như chim nào, vù vù!`, 'Con thỏ': `${N} giơ hai tay làm tai thỏ, nhảy tưng tưng nào!`,
+  'Con gấu': `${N} ôm mẹ một cái thật chặt như gấu nào!`, 'Hươu cao cổ': `${N} rướn cổ thật cao như hươu cao cổ nào!`,
+  'Con chuột': `${N} kêu chít chít, đi rón rén như chuột nào!`, 'Con ong': `${N} bay vo ve như ong, vo ve, vo ve!`,
+  'Con bướm': `${N} vẫy hai tay như cánh bướm nào!`, 'Bọ rùa': `${N} bò chậm chậm như bọ rùa nào!`,
+  'Con kiến': `${N} lấy ngón tay làm kiến bò lên tay mẹ nào, cù cù!`, 'Ốc sên': `${N} bò thật chậm như ốc sên nào, chậm chậm!`,
+  'Cú mèo': `${N} mở mắt tròn xoe như cú mèo, hu hu!`, 'Con vẹt': `${N} nói theo con vẹt nào: Xin chào! Xin chào!`,
+  'Ngựa vằn': `${N} chạy nhanh như ngựa vằn nào!`, 'Cá sấu': `${N} giơ hai tay làm miệng cá sấu, ngoàm ngoàm!`,
+  'Con rắn': `${N} uốn éo như rắn nào, xì xì!`, 'Con cáo': `${N} vẫy cái đuôi xù tưởng tượng nào!`,
+  'Gấu trúc': `${N} lấy tay che mắt như gấu trúc, ú òa!`, 'Chuột túi': `${N} nhảy thật cao như chuột túi nào, tưng tưng!`,
+  'Con sóc': `${N} chụm tay gặm hạt như sóc, rốp rốp!`, 'Con nhím': `${N} cuộn tròn như con nhím nào!`,
+  'Con cá': `${N} chu môi như con cá nào, bóp bóp!`, 'Cá cảnh': `${N} vẫy tay bơi như cá cảnh nào!`,
+  'Cá nóc': `${N} phồng má thật to như cá nóc, rồi xì hơi, phì!`, 'Cá mập': `${N} há miệng to như cá mập nào, ngoàm!`,
+  'Cá heo': `${N} nhảy lên như cá heo, tõm!`, 'Cá voi': `${N} phun nước như cá voi nào, phì phì!`,
+  'Bạch tuộc': `${N} vẫy tay vẫy chân như bạch tuộc nào!`, 'Con cua': `${N} bò ngang như cua, tay kẹp kẹp nào!`,
+  'Con tôm': `${N} co người rồi búng như tôm nào!`, 'Con mực': `${N} trốn đi như con mực, ú òa!`,
+  'Con rùa': `${N} rụt cổ như rùa nào! Rồi thò đầu ra, ú òa!`, 'Vỏ ốc': `${N} áp tay vào tai nghe tiếng biển nào, rì rào!`,
+  'Hải cẩu': `${N} vỗ tay bép bép như hải cẩu nào!`, 'Chim cánh cụt': `${N} đi lạch bạch như chim cánh cụt nào!`,
+  'Tôm hùm': `${N} giơ hai tay làm càng tôm hùm, kẹp kẹp!`, 'Rái cá': `${N} nằm ngửa xoa bụng như rái cá nào!`,
+  'Cá voi xanh': `${N} dang tay thật rộng, to như cá voi xanh nào!`, 'Hòn đảo': `${N} đứng im như hòn đảo nào, im im!`,
+  'Quả táo': `${N} giả vờ cắn táo nào, rộp rộp, ngon quá!`, 'Quả chuối': `${N} cầm chuối nghe điện thoại nào, a lô, a lô!`,
+  'Quả cam': `${N} nhăn mặt thật chua nào, hi hi!`, 'Chùm nho': `${N} giả vờ ăn nho, măm măm nào!`,
+  'Dưa hấu': `${N} xoa bụng sau khi ăn dưa hấu nào, mát quá!`, 'Quả dâu': `${N} hôn gió một cái thật kêu nào, chụt!`,
+  'Quả xoài': `${N} liếm môi như ăn xoài nào, thơm quá!`, 'Quả dứa': `${N} đội vương miện dứa lên đầu nào!`,
+  'Quả lê': `${N} cắn một miếng lê nào, rộp!`, 'Quả đào': `${N} xoa má hồng như quả đào nào!`,
+  'Quả dừa': `${N} gõ gõ lên đầu như gõ quả dừa nào, cốc cốc!`, 'Cà rốt': `${N} gặm cà rốt như thỏ nào, rộp rộp!`,
+  'Cà chua': `${N} phồng má đỏ như quả cà chua nào!`, 'Dưa chuột': `${N} cắn dưa chuột nào, giòn rụm!`,
+  'Bắp ngô': `${N} gặm ngô nào, gặm gặm!`, 'Khoai tây': `${N} cuộn tròn như củ khoai tây nào!`,
+  'Súp lơ xanh': `${N} giơ hai tay làm cái cây súp lơ nào!`, 'Quả anh đào': `${N} nắm tay mẹ như hai quả anh đào nào!`,
+  'Quả kiwi': `${N} xoa đầu lông xù như kiwi nào!`, 'Quả chanh': `${N} nhăn mặt chua lè nào, ối chua quá!`,
+  'Ô tô': `${N} cầm vô lăng lái ô tô nào, bíp bíp!`, 'Xe buýt': `${N} lắc lư như ngồi xe buýt nào!`,
+  'Xe máy': `${N} vặn tay ga nào, brừm brừm!`, 'Xe đạp': `${N} nằm ngửa đạp chân như đạp xe nào!`,
+  'Máy bay': `${N} dang hai tay bay như máy bay nào, ù ù!`, 'Tàu hỏa': `${N} xoay tay như bánh tàu hỏa, xình xịch, tu tu!`,
+  'Thuyền': `${N} chèo thuyền nào, chèo chèo!`, 'Xe cứu hỏa': `${N} cầm vòi phun nước nào, xèo xèo!`,
+  'Xe cứu thương': `${N} kêu i u i u nào!`, 'Trực thăng': `${N} xoay vòng vòng như cánh quạt trực thăng nào!`,
+  'Máy cày': `${N} kêu cạch cạch như máy cày nào!`, 'Tên lửa': `${N} ngồi xuống, đếm ba, hai, một, rồi nhảy lên như tên lửa!`,
+  'Xe cảnh sát': `${N} kêu u e u e như xe cảnh sát nào!`, 'Taxi': `${N} vẫy tay gọi taxi nào, taxi ơi!`,
+  'Xe tải': `${N} gồng tay chở đồ thật nặng nào, hự!`, 'Xe đua': `${N} chạy tại chỗ thật nhanh như xe đua nào!`,
+  'Xe trượt': `${N} co một chân lướt như xe trượt nào!`, 'Tàu thủy': `${N} kéo còi tàu thủy nào, tu tu!`,
+  'Đĩa bay': `${N} kêu bíp bíp như người ngoài hành tinh nào!`, 'Cáp treo': `${N} đung đưa người như cáp treo nào!`,
+  'Màu đỏ': `${N} tìm thứ gì màu đỏ trong phòng nào!`, 'Màu vàng': `${N} tìm thứ gì màu vàng xung quanh nào!`,
+  'Màu xanh lá': `${N} tìm cái gì màu xanh lá nào!`, 'Màu xanh dương': `${N} chỉ lên bầu trời màu xanh dương nào!`,
+  'Màu cam': `${N} tìm thứ gì màu cam nào!`, 'Màu tím': `${N} tìm thứ gì màu tím nào!`,
+  'Màu hồng': `${N} chỉ vào má hồng của ${N} nào!`, 'Màu trắng': `${N} tìm thứ gì màu trắng nào!`,
+  'Màu đen': `${N} nhắm mắt lại xem, tối đen như mực, ú òa!`, 'Màu nâu': `${N} tìm thứ gì màu nâu nào!`,
+  'Đôi mắt': `${N} nhắm mắt lại, rồi mở ra, ú òa!`, 'Cái mũi': `${N} chạm mũi rồi chạm tai nào!`,
+  'Cái miệng': `${N} hôn mẹ một cái nào, chụt chụt!`, 'Cái tai': `${N} kéo nhẹ hai tai như thỏ nào!`,
+  'Bàn tay': `${N} xòe bàn tay ra, rồi nắm lại nào!`, 'Bàn chân': `${N} ngọ nguậy các ngón chân nào!`,
+  'Cái răng': `${N} đánh răng nào, chải chải chải!`, 'Cánh tay': `${N} giơ hai tay lên cao, thật cao nào!`,
+  'Cái chân': `${N} đá chân lên nào, một, hai!`, 'Cái lưỡi': `${N} lè lưỡi chạm mũi xem nào, hi hi!`,
+  'Em bé': `${N} khóc oe oe như em bé nào, hi hi!`, 'Khuôn mặt': `${N} làm mặt xấu nào, ha ha ha!`,
+  'Hình tròn': `${N} lấy tay vẽ một vòng tròn trên không nào!`, 'Hình vuông': `${N} vẽ hình vuông trên không nào!`,
+  'Hình tam giác': `${N} chụm tay làm mái nhà tam giác nào!`, 'Ngôi sao': `${N} xòe tay lấp lánh như ngôi sao nào!`,
+  'Trái tim': `${N} lấy hai tay làm hình trái tim tặng mẹ nào!`, 'Hình thoi': `${N} chạy như con diều bay nào!`,
+  'Hình chữ nhật': `${N} mở cửa đi ra nào, cạch!`, 'Hình bầu dục': `${N} cuộn tròn như quả trứng nào!`,
+  'Trăng khuyết': `${N} cười thật tươi, miệng cong như trăng khuyết nào!`,
+  'Mặt trời': `${N} vươn vai chào ông mặt trời nào!`, 'Mặt trăng': `${N} ngáp một cái thật to, oáp, buồn ngủ quá!`,
+  'Đám mây': `${N} thổi phù phù cho mây bay đi nào!`, 'Trời mưa': `${N} lấy ngón tay làm mưa rơi tí tách nào!`,
+  'Cầu vồng': `${N} vẽ cầu vồng thật to trên không nào!`, 'Bông tuyết': `${N} run cầm cập vì lạnh nào, brrr!`,
+  'Tia chớp': `${N} bịt tai lại nào, đùng đoàng!`, 'Sóng biển': `${N} đưa tay lượn sóng nào, ào ào!`,
+  'Cây xanh': `${N} giơ tay lên làm cành cây đung đưa trong gió nào!`, 'Bông hoa': `${N} hít thật sâu ngửi hoa nào, thơm quá!`,
+  'Ngọn lửa': `${N} thổi phù tắt nến nào, phù!`, 'Ngọn núi': `${N} kiễng chân lên thật cao như núi nào!`,
+  'Gấu bông': `${N} ôm gấu bông thật chặt nào!`, 'Quả bóng': `${N} sút bóng nào, sút!`, 'Con diều': `${N} chạy thả diều nào, vù vù!`,
+  'Cái trống': `${N} vỗ tay như đánh trống nào, tùng tùng tùng!`, 'Quyển sách': `${N} mở hai tay như mở sách nào!`,
+  'Cái giường': `${N} giả vờ ngủ nào, khò khò!`, 'Cái ghế': `${N} ngồi xuống, rồi đứng lên nào!`,
+  'Cái thìa': `${N} há miệng to, a ăm nào!`, 'Bình sữa': `${N} giả vờ uống sữa nào, ực ực!`,
+  'Đôi giày': `${N} dậm chân đi giày nào, cộp cộp!`, 'Bóng bay': `${N} thổi bóng bay nào, phù phù!`,
+  'Cái chuông': `${N} lắc lắc tay như rung chuông nào, leng keng!`, 'Hộp quà': `${N} mở quà nào, a, bất ngờ chưa!`,
+  'Đồng hồ': `${N} lắc lư như quả lắc đồng hồ nào, tích tắc!`,
+});
+const actLine = it => it.count ? pick([`${Nick()} nhảy ${NUMW[it.count]} cái nào!`, `${Nick()} vỗ tay ${NUMW[it.count]} cái nào!`])
+  : it.letter ? `${Nick()} nói thật to nào: ${it.say}!` : ACT(Nick())[it.vi] || '';
+const actLines = it => it.count ? [`${Nick()} nhảy ${NUMW[it.count]} cái nào!`, `${Nick()} vỗ tay ${NUMW[it.count]} cái nào!`] : [actLine(it)];
 const funLine = it => it.count ? `${Nick()} giơ ${NUMW[it.count]} ngón tay lên nào!`
   : it.letter ? `${it.vi} có chữ ${it.say} đó ${nick()} ơi!` : FUN(Nick())[it.vi] || '';
 const capF = t => t.charAt(0).toUpperCase() + t.slice(1);
@@ -667,6 +771,7 @@ function go(name, arg) {
   else if (name === 'balloons') renderBalloons();
   else if (name === 'review') renderLearn('review');
   else if (name === 'draw') renderDraw();
+  else if (name === 'sleep') renderSleep();
 }
 function renderHome() {
   $('#title').innerHTML = `Bé Học Vui <small>· Cấp ${level()} · ⭐ ${P.stars}</small>`;
@@ -706,7 +811,7 @@ function renderLearn(arg) {
   let pos = start, shown = 0;
   function sayItem(item, call, fun) {
     const en = sayEn() ? { t: item.en, en: true } : null;
-    const fl = fun && sayVi() ? funLine(item) : '';
+    const fl = !fun || !sayVi() ? '' : fun === 'act' ? actLine(item) : funLine(item);
     if (item.count) {
       const spans = card.querySelectorAll('.counts>span'), fings = card.querySelectorAll('.fg');
       fings.forEach(f => f.classList.remove('up'));
@@ -737,7 +842,7 @@ function renderLearn(arg) {
     restart(card, dir > 0 ? 'slideL' : dir < 0 ? 'slideR' : 'bounce');
     dots.querySelectorAll('i').forEach((d, j) => d.classList.toggle('on', j === pos));
     markSeen(r.k, r.i);
-    sayItem(item, shown++ === 0 || Math.random() < .4, Math.random() < .35);
+    const rr = Math.random(); sayItem(item, shown++ === 0 || Math.random() < .4, rr < .3 ? 'fun' : rr < .55 ? 'act' : false);
   }
   const step = d => { sfx.tap(); pos = (pos + d + refs.length) % refs.length; draw(d); };
   $('#prev').onclick = () => step(-1);
@@ -749,7 +854,7 @@ function renderLearn(arg) {
     if (Math.abs(dx) > 60) return step(dx < 0 ? 1 : -1);
     const now = Date.now(); if (now - lastTap < 350) return; lastTap = now;
     sfx.pop(); restart(card, 'bounce'); celebrate(e.clientX, e.clientY);
-    const r = refs[pos]; sayItem(CATS[r.k].items[r.i], false, ++taps % 2 === 1);
+    const r = refs[pos]; sayItem(CATS[r.k].items[r.i], false, ['fun', 'act', false][taps++ % 3]);
   });
   draw(0);
 }
@@ -790,9 +895,10 @@ function renderGame() {
         const r = rec(t.k, t.i); r.t = Date.now();
         if (first) { r.c++; P.stars++; } saveP(); $('#st').textContent = '⭐ ' + P.stars;
         const pr = PRAISE(); cheer(pr);
-        speak([pr, sayVi() ? (o.letter ? `Chữ ${o.say}.` : o.vi) : '', sayEn() ? { t: o.en, en: true } : '', sayEn() ? { t: PRAISE_EN(), en: true } : '', sayVi() && Math.random() < .3 ? funLine(o) : '']);
+        const roll = Math.random(), extra = !sayVi() || roll > .45 ? '' : roll < .2 ? funLine(o) : actLine(o), pause = extra && roll >= .2 ? 2500 : 0;
+        speak([pr, sayVi() ? (o.letter ? `Chữ ${o.say}.` : o.vi) : '', sayEn() ? { t: o.en, en: true } : '', sayEn() ? { t: PRAISE_EN(), en: true } : '', extra]);
         const news = tryLevelUp(t.k);
-        stopWait = afterSpeech(() => news ? showLevelUp(t.k, news) : round(), 2200);
+        stopWait = afterSpeech(() => { roundT = setTimeout(() => news ? showLevelUp(t.k, news) : round(), pause); }, 2200);
       } else {
         if (first) { rec(t.k, t.i).w++; saveP(); } first = false;
         sfx.soft(); restart(b, 'wiggle');
@@ -999,6 +1105,91 @@ function renderDraw() {
   setup();
 }
 
+
+/* ---------- Ru ngủ ---------- */
+let STORIES = null, wakeLock = null;
+async function loadStories() {
+  if (STORIES) return STORIES;
+  try { STORIES = await (await fetch('stories.json', { cache: 'no-store' })).json(); } catch (e) { STORIES = []; }
+  STORIES.sort((a, b) => (b.date || '').localeCompare(a.date || '') || (b.id || '').localeCompare(a.id || ''));
+  return STORIES;
+}
+async function keepAwake(on) {
+  try {
+    if (on && 'wakeLock' in navigator && !wakeLock) { wakeLock = await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release', () => wakeLock = null); }
+    else if (!on && wakeLock) { await wakeLock.release(); wakeLock = null; }
+  } catch (e) {}
+}
+function blackScreen(on) {
+  const b = $('#black'); b.classList.toggle('show', on); $('#blackHint').textContent = '';
+}
+(() => {
+  let taps = [], hintT;
+  $('#black').addEventListener('pointerdown', e => {
+    e.preventDefault(); const now = Date.now(); taps = taps.filter(t => now - t < 1500); taps.push(now);
+    $('#blackHint').textContent = 'Chạm 3 lần để mở màn hình'; clearTimeout(hintT); hintT = setTimeout(() => $('#blackHint').textContent = '', 2000);
+    if (taps.length >= 3) { taps = []; blackScreen(false); }
+  });
+})();
+function renderSleep() {
+  sleepMode = true; document.body.classList.add('night');
+  $('#title').innerHTML = '🌙 Ru ngủ';
+  music.setMode('sleep'); music.forceStart(); keepAwake(true);
+  view.innerHTML = `<div class="sleepv"><div class="sleepbar">
+      <button class="sbtn" id="playAll">▶ Kể liên tục</button>
+      <select class="sbtn" id="sleepMin">${[10, 20, 30, 45, 60].map(m => `<option value="${m}" ${S.sleepMin == m ? 'selected' : ''}>⏲ Tắt sau ${m} phút</option>`).join('')}</select>
+      <button class="sbtn" id="blackBtn">🌑 Tắt màn hình</button></div>
+      <div id="sleepBody" class="sgrid">Đang tải truyện…</div></div>`;
+  const body = $('#sleepBody');
+  let cur = -1, audio = null, cont = false, endT = Date.now() + S.sleepMin * 60000, nextT2, stopW, ended = false;
+  const stopStory = () => { storyPlaying = false; clearTimeout(nextT2); stopW && stopW(); if (audio) { audio.pause(); audio = null; } speak([]); };
+  const isNewStory = st => st.date && (Date.now() - new Date(st.date).getTime()) < 2 * 86400000;
+  function list() {
+    stopStory(); cur = -1; body.className = 'sgrid';
+    if (!STORIES.length) { body.innerHTML = '<p>Chưa tải được truyện. Kiểm tra kết nối mạng nhé.</p>'; return; }
+    body.innerHTML = STORIES.map((st, i) => `<button class="scard" data-i="${i}">${isNewStory(st) ? '<span class="tbadge">MỚI</span>' : ''}<span class="se">${emo(st.emoji || '📖')}</span>${st.title}</button>`).join('');
+    body.querySelectorAll('[data-i]').forEach(b => b.onclick = () => { sfx.tap(); cont = false; play(+b.dataset.i); });
+  }
+  function done() {
+    storyPlaying = false;
+    if (cont && Date.now() < endT && STORIES.length) nextT2 = setTimeout(() => play((cur + 1) % STORIES.length), 5000);
+  }
+  function play(i) {
+    stopStory(); cur = i; const st = STORIES[i];
+    const text = st.text.replaceAll('{N}', Nick());
+    body.className = '';
+    body.style.flex = '1'; body.style.minHeight = '0';
+    body.innerHTML = `<div class="story"><div class="semo breathe">${emo(st.emoji || '📖')}</div><h2>${st.title}</h2>
+      <div class="stext">${text.split(/(?<=[.!?])\s+/).map(x => `<span>${x} </span>`).join('')}</div>
+      <div class="sctl"><button class="sbtn" id="sBack">📚 Danh sách</button><button class="sbtn" id="sPause">⏸ Tạm dừng</button><button class="sbtn" id="sNext">⏭ Truyện khác</button></div></div>`;
+    $('#sBack').onclick = () => { sfx.tap(); list(); };
+    $('#sNext').onclick = () => { sfx.tap(); play((cur + 1) % STORIES.length); };
+    $('#sPause').onclick = () => {
+      const b = $('#sPause');
+      if (audio) { if (audio.paused) { audio.play(); storyPlaying = true; b.textContent = '⏸ Tạm dừng'; } else { audio.pause(); storyPlaying = false; b.textContent = '▶ Kể tiếp'; } }
+      else if ('speechSynthesis' in window) { if (speechSynthesis.paused) { speechSynthesis.resume(); b.textContent = '⏸ Tạm dừng'; } else { speechSynthesis.pause(); b.textContent = '▶ Kể tiếp'; } }
+    };
+    storyPlaying = true;
+    const tts = () => { audio = null; storyPlaying = false; speak(text.split(/(?<=[.!?])\s+/)); stopW = afterSpeech(done, 1500, 15 * 60000); };
+    if (S.rec && nick() === 'Meo' && st.audio !== false) {
+      audio = new Audio(`audio/story-${st.id}.mp3`); audio.playbackRate = 1;
+      audio.onended = () => { audio = null; done(); }; audio.onerror = tts;
+      audio.play().catch(tts);
+    } else tts();
+  }
+  $('#playAll').onclick = () => { sfx.tap(); cont = true; endT = Date.now() + S.sleepMin * 60000; ended = false; music.setMode('sleep'); music.forceStart(); play(cur >= 0 ? cur : 0); };
+  $('#sleepMin').onchange = e => { S.sleepMin = +e.target.value; saveS(); endT = Date.now() + S.sleepMin * 60000; ended = false; toast('Nhạc và truyện sẽ tắt sau ' + S.sleepMin + ' phút'); };
+  $('#blackBtn').onclick = () => { blackScreen(true); };
+  const iv = setInterval(() => {
+    if (!ended && Date.now() > endT) { ended = true; cont = false; stopStory(); music.fadeOut(60); setTimeout(() => keepAwake(false), 62000); }
+  }, 5000);
+  loadStories().then(() => { list(); speak(`${Nick()} ơi, nằm xuống, mình nghe kể chuyện nhé!`); });
+  cleanup = () => {
+    clearInterval(iv); stopStory(); sleepMode = false; document.body.classList.remove('night'); keepAwake(false); blackScreen(false);
+    music.setMode(false); if (!S.music) music.stop();
+  };
+}
+
 /* ---------- Lên cấp ---------- */
 let lvTarget = null;
 function showLevelUp(k, news) {
@@ -1029,7 +1220,7 @@ function renderBalloons() {
       const tr = getComputedStyle(b).transform; b.style.transform = tr === 'none' ? '' : tr; b.style.animation = 'none';
       b.classList.add('pop'); sfx.pop(); celebrate(e.clientX, e.clientY);
       pops++;
-      speak([sayVi() ? (item.letter ? `Chữ ${item.say}.` : item.vi) : '', sayEn() ? { t: item.en, en: true } : '', pops % 5 !== 0 && sayVi() && Math.random() < .2 ? funLine(item) : '', pops % 5 === 0 ? PRAISE() : '', pops % 5 === 0 ? `${Nick()} bắt được ${pops} quả bóng rồi!` : '']);
+      speak([sayVi() ? (item.letter ? `Chữ ${item.say}.` : item.vi) : '', sayEn() ? { t: item.en, en: true } : '', pops % 5 !== 0 && sayVi() && Math.random() < .25 ? (Math.random() < .5 ? funLine(item) : actLine(item)) : '', pops % 5 === 0 ? PRAISE() : '', pops % 5 === 0 ? `${Nick()} bắt được ${pops} quả bóng rồi!` : '']);
       setTimeout(() => b.remove(), 260);
     });
     b.addEventListener('animationend', () => b.remove());
@@ -1083,7 +1274,7 @@ setInterval(() => {
     if (remain > 0) { remain--; fmtRest(); if (remain === 0) { $('#restCount').style.display = 'none'; $('#restGo').style.display = ''; speak(`${Nick()} nghỉ xong rồi!`); } }
     return;
   }
-  if (mode || blocking()) return;
+  if (mode || blocking() || sleepMode) return;
   usage.sec++; sessionSec++; sinceBreak++;
   if (usage.sec % 10 === 0) saveU();
   if (S.eye) {
@@ -1212,8 +1403,13 @@ const music = (() => {
     ['G4','A4','C5','D5','E5',0,'D5','C5'], ['A4','C5','A4','G4','E4',0,'G4',0], ['E5','G5','E5','D5','C5','D5','E5',0], ['D5','C5','A4','D5','C5',0,0,0],
   ];
   const BASS = [['C4','G3'], ['A3','E4'], ['D4','A3'], ['C4','G3'], ['C4','G3'], ['A3','E4'], ['C4','G3'], ['G3','C4']];
+  // Nhạc ru kiểu hộp nhạc, nhịp 3/4 chậm (tự soạn)
+  const SL = [['E5',0,'G5',0,'E5',0], ['D5',0,'C5',0,'D5',0], ['E5',0,'D5',0,'C5',0], ['A4',0,0,0,'G4',0],
+              ['C5',0,'E5',0,'G5',0], ['A5',0,'G5',0,'E5',0], ['D5',0,'E5',0,'D5',0], ['C5',0,0,0,0,0]];
+  const SLB = ['C4', 'G3', 'A3', 'E4', 'C4', 'A3', 'G3', 'C4'];
+  N.A5 = 880;
   let ctx, master, timer, step = 0, nextT = 0, on = false;
-  let spb = 60 / 104 / 2, lively = false;
+  let spb = 60 / 104 / 2, lively = false, sleepy = false;
   function note(f, t, d, type, v) {
     const o = ctx.createOscillator(), g = ctx.createGain();
     o.type = type; o.frequency.value = f;
@@ -1221,8 +1417,17 @@ const music = (() => {
     o.connect(g).connect(master); o.start(t); o.stop(t + d + 0.05);
   }
   function tick() {
-    const speaking = speakingNow;
-    master.gain.setTargetAtTime((speaking ? 0.25 : 1) * S.musicVol * 0.5, ctx.currentTime, 0.15);
+    const speaking = speakingNow || storyPlaying;
+    if (!fading) master.gain.setTargetAtTime((speaking ? (sleepy ? 0.4 : 0.25) : 1) * S.musicVol * (sleepy ? 0.6 : 0.5), ctx.currentTime, 0.3);
+    if (sleepy) {
+      while (nextT < ctx.currentTime + 0.3) {
+        const bar = Math.floor(step / 6) % SL.length, i = step % 6, m = SL[bar][i];
+        if (m) { note(N[m], nextT, spb * 5, 'sine', 0.07); note(N[m] * 2, nextT, spb * 2, 'sine', 0.012); }
+        if (i === 0) note(N[SLB[bar]] / 2, nextT, spb * 6.5, 'sine', 0.06);
+        step++; nextT += spb;
+      }
+      return;
+    }
     while (nextT < ctx.currentTime + 0.25) {
       const bar = Math.floor(step / 8) % MEL.length, i = step % 8, m = MEL[bar][i];
       if (m) note(N[m], nextT, spb * 1.6, 'triangle', 0.09);
@@ -1233,8 +1438,9 @@ const music = (() => {
       step++; nextT += spb;
     }
   }
-  function start() {
-    if (on || !S.music) return;
+  let fading = false;
+  function start(force) {
+    if (on || (!S.music && !force)) return;
     try {
       ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
       if (!master) { master = ctx.createGain(); master.gain.value = 0; master.connect(ctx.destination); }
@@ -1244,11 +1450,12 @@ const music = (() => {
   function stop() { on = false; clearInterval(timer); if (master) master.gain.setTargetAtTime(0, ctx.currentTime, 0.1); }
   function sync() { $('#musicBtn').style.opacity = S.music ? 1 : .4; if (S.music && started) start(); else if (!S.music) stop(); }
   let started = false;
-  const setMode = live => { lively = live; spb = 60 / (live ? 126 : 100) / 2; };
-  return { setMode, start: () => { started = true; start(); }, stop, sync, pause: () => on && stop(), resume: () => started && start() };
+  const setMode = m => { fading = false; sleepy = m === 'sleep'; lively = m === true; spb = 60 / (sleepy ? 66 : lively ? 126 : 100) / 2; if (sleepy) step = 0; };
+  const fadeOut = sec => { if (!on) return; fading = true; master.gain.setTargetAtTime(0, ctx.currentTime, sec / 4); setTimeout(() => { if (fading) stop(); }, sec * 1000); };
+  return { setMode, fadeOut, forceStart: () => { started = true; start(true); }, isOn: () => on, start: () => { started = true; start(); }, stop, sync, pause: () => on && stop(), resume: () => started && start() };
 })();
 $('#musicBtn').onclick = () => { S.music = !S.music; saveS(); music.sync(); toast(S.music ? '🎵 Bật nhạc' : 'Tắt nhạc'); };
-document.addEventListener('visibilitychange', () => document.hidden ? music.pause() : music.resume());
+document.addEventListener('visibilitychange', () => { if (sleepMode) return; document.hidden ? music.pause() : music.resume(); });
 
 
 /* ================== DANH SÁCH CÂU NÓI (tạo giọng thu sẵn) ================== */
@@ -1260,12 +1467,12 @@ function allPhrases() {
     vi(`${N} ơi, ${nm(it)} đâu nhỉ?`); vi(`Đây là ${nm(it)}.`); vi(`${N} tìm ${nm(it)} nhé!`);
     if (it.letter) vi(`Chữ ${it.say}.`);
     if (!it.letter) en('This is ' + it.en + '.');
-    vi(funLine(it)); QUESTIONS(it).forEach(vi); if (!it.count && !it.letter) INTROS(it).forEach(vi);
+    vi(funLine(it)); actLines(it).forEach(vi); QUESTIONS(it).forEach(vi); if (!it.count && !it.letter) INTROS(it).forEach(vi);
   });
   for (const k in CATS) CATS[k].items.forEach(it => { if (!it.letter) { const save = S.lang; S.lang = 'en'; question(it, false).parts.forEach(p => typeof p === 'object' && en(p.t)); S.lang = save; } });
   NUMW.slice(1).forEach(vi); NUME.slice(1).forEach(en);
   [...CALLS(), ...PRAISES(), ...PRAISES_DRAW()].forEach(vi); [...PRAISES_EN, ...DRAW_EN, 'Hello! I love you!'].forEach(en);
-  en(N + '!'); [...OOPS, ...GIGGLE, 'Nét nhỏ', 'Nét vừa', 'Nét to', 'Bấm lần nữa để xóa hết nhé!', `${N} chọn tranh để tô màu nhé!`].forEach(vi);
+  en(N + '!'); [`${N} ơi, nằm xuống, mình nghe kể chuyện nhé!`, ...OOPS, ...GIGGLE, 'Nét nhỏ', 'Nét vừa', 'Nét to', 'Bấm lần nữa để xóa hết nhé!', `${N} chọn tranh để tô màu nhé!`].forEach(vi);
   ['Xong rồi!', 'Có bạn mới nè!', 'Cục tẩy', 'Đóng dấu hình', 'Xóa hết rồi, vẽ lại nào!', 'Chớp chớp mắt nào!', `${N} vẽ gì nào? Vẽ thật đẹp nhé!`,
    `${N} ơi, nhìn ra xa thật xa nhé. Nhìn cây xanh nào!`, `${N} ơi, mắt mệt rồi. Mình nghỉ một chút, đi uống nước nhé!`, `Hôm nay ${n} chơi đủ rồi. Hẹn ${n} ngày mai nhé!`,
    `Giỏi lắm ${n}! Chơi tiếp nào!`, `${N} nghỉ xong rồi!`, `${N} ơi! Chào ${n} nhé!`, `Chào ${n}! Mình cùng học nhé!`].forEach(vi);
