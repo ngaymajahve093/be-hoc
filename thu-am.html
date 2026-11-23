@@ -46,6 +46,10 @@
 <main>
   <div id="loading">Đang tải danh sách câu…</div>
   <div id="app" hidden>
+    <div class="tips" id="goal" style="margin:0 0 10px;background:#e8f5e9">
+      👩 <b>Mẹ chỉ cần thu nhóm 💖 Khen &amp; chào</b> (<span id="khenN"></span> câu, khoảng 5 phút).<br>
+      Các câu này bé nghe đúng giọng mẹ, và AI sẽ học giọng mẹ từ đó để đọc tất cả câu còn lại. Thu xong bấm <b>📤 Gửi bản thu</b>.
+    </div>
     <div class="chips" id="chips"></div>
     <label class="f"><input type="checkbox" id="onlyNew" checked> Chỉ hiện câu chưa thu</label>
     <div class="card">
@@ -65,7 +69,7 @@
       💡 <b>Mẹo thu đẹp:</b> ngồi phòng yên tĩnh, tắt quạt/TV. Cầm điện thoại cách miệng khoảng một gang tay.
       Bấm <b>Thu</b>, chờ nửa giây rồi đọc thật vui như đang nói với bé, đọc xong bấm lần nữa để dừng.
       Bấm <b>🤖 Giọng máy</b> nếu muốn nghe cách đọc hiện tại.<br>
-      Không cần thu hết: câu nào chưa thu thì web vẫn dùng giọng máy. Bản thu được lưu ngay trên điện thoại, mai thu tiếp vẫn còn.
+      Các nhóm khác là tùy chọn: nếu nghe câu nào AI đọc chưa hay (nút 🤖) thì mẹ thu lại câu đó. Bản thu được lưu ngay trên điện thoại, mai thu tiếp vẫn còn.
     </div>
   </div>
 </main>
@@ -147,13 +151,14 @@ function refresh(reset) {
   show();
 }
 function show() {
-  const done = ALL.filter(t => recs.has(key(t))).length;
-  $('#prog').textContent = `Đã thu ${done} / ${ALL.length} câu`;
-  $('#barI').style.width = (100 * done / ALL.length) + '%';
+  const done = ALL.filter(t => recs.has(key(t))).length, K = GROUPS[0][1], kd = K.filter(t => recs.has(key(t))).length;
+  $('#khenN').textContent = K.length;
+  $('#prog').textContent = kd < K.length ? `Câu khen: đã thu ${kd} / ${K.length}` : `🎉 Đã thu đủ câu khen! (tổng ${done} câu) – bấm Gửi bản thu nhé`;
+  $('#barI').style.width = (100 * Math.min(1, kd / K.length)) + '%';
   $('#sendBtn').disabled = !recs.size;
   $('#sendBtn').textContent = `📤 Gửi bản thu (${recs.size} câu)`;
   const t = list[idx];
-  if (!t) { $('#txt').textContent = '🎉 Nhóm này thu xong rồi!'; $('#num').textContent = ''; $('#state').textContent = 'Chọn nhóm khác ở trên nhé'; $('#state').className = ''; ['recBtn','playBtn','delBtn','robotBtn'].forEach(id => $('#' + id).disabled = true); return; }
+  if (!t) { $('#txt').textContent = '🎉 Nhóm này thu xong rồi!'; $('#num').textContent = ''; $('#state').textContent = gi === 0 ? 'Bấm 📤 Gửi bản thu ở dưới nhé' : 'Chọn nhóm khác ở trên nhé'; $('#state').className = ''; ['recBtn','playBtn','delBtn','robotBtn'].forEach(id => $('#' + id).disabled = true); return; }
   $('#recBtn').disabled = false; $('#robotBtn').disabled = !(window.VOICE && VOICE.has(key(t)));
   $('#num').textContent = `Câu ${idx + 1} / ${list.length}`;
   $('#txt').textContent = t;
